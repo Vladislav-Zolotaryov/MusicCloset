@@ -5,8 +5,12 @@ if ARGV.size != 1
 end
 
 dir = ARGV[0]
-Dir.glob("#{dir}/**/*")do |item|
+Dir.glob("#{dir}/**/*.mp3")do |item|
 	next if item == '.' or item == '..'
-	puts item
+	Mp3Info.open(item, :encoding => 'UTF-8') do |mp3|
+		puts mp3.tag.title
+		puts mp3.tag.artist
+		puts '--->>><<<---'
+	end
 end
 
