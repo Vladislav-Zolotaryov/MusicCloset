@@ -25,24 +25,20 @@ end
 
 class RecordManager
 
-	attr_reader :records
-
-	def initialize
-		@records = []
-	end
-
 	def collect(dir) 
+		records = []
 		Dir.glob("#{dir}/**/*.mp3") do |item|
 			TagLib::FileRef.open(item) do |refFile|
 				tag = refFile.tag
-				@records.push(Mp3Record.new(tag.title, tag.artist, tag.album, item))
+				records.push(Mp3Record.new(tag.title, tag.artist, tag.album, item))
 			end
 		end
+		records
 	end
 
-	def aggregate
+	def aggregate(records)
 		aggregatedValues = Hash.new { |h,k| h[k] = [] }
-		@records.each do |record|
+		records.each do |record|
 			aggregatedValues[record.asSongName()] << record
 		end
 		aggregatedValues
@@ -51,14 +47,17 @@ class RecordManager
 	def organize(aggregatedValues, dir)
 		aggregatedValues.each do |key, records|
 			firstRecord = records.first
-			recordsPath = "#{dir}/#{firstRecord.artist}/"
+			recordsPath = "#{dir}#{firstRecord.artist.to_s.gsub '/', ''}/"
 			downcaseTitle = firstRecord.title.to_s.downcase
 			if downcaseTitle.include? "[live]" or downcaseTitle.include? "(live)"
 				recordsPath += "live/"
 			end
 			FileUtils.mkpath recordsPath	
 			records.each_with_index do |record, index|
-				destination = recordsPath + "#{record.artist} - #{record.title}"
+				artist = record.artist.to_s.gsub '/', ''
+				title = record.title.to_s.gsub '/', ''
+
+				destination = recordsPath + "#{artist} - #{title}"
 				if records.size > 1
 					destination += " D[#{index}]"
 				end
@@ -75,10 +74,17 @@ if ARGV.size != 2
 end
 
 inputDir = ARGV[0]
+if inputDir[-1] != "/"
+	inputDir += "/"
+end
+
 outputDir = ARGV[1]
+if outputDir[-1] != "/"
+	outputDir += "/"
+end
+
 manager = RecordManager.new
-manager.collect(inputDir)
-manager.organize(manager.aggregate(), outputDir)
+manager.organize(manager.aggregate(manager.collect(inputDir)), outputDir)
 
 
 
