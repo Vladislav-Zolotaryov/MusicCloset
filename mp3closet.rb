@@ -1,15 +1,16 @@
-require "mp3info"
+require "taglib"
 require "pp"
+require 'fileutils'
 
 class Mp3Record
 
-	attr_reader :title, :artist, :album, :filename
+	attr_reader :title, :artist, :album, :file
 
-	def initialize(title, artist, album, filename)
+	def initialize(title, artist, album, file)
 		@title = title
 		@artist = artist
 		@album = album
-		@filename = filename
+		@file = file
 	end 
 
 	def asSongName
@@ -31,20 +32,41 @@ class RecordManager
 	end
 
 	def collect(dir) 
-		Dir.glob("#{dir}/**/*.mp3")do |item|
-			Mp3Info.open(item) do |mp3|
-				@records.push(Mp3Record.new(mp3.tag.title, mp3.tag.artist, mp3.tag.album, File.basename(item)))
+		Dir.glob("#{dir}/**/*.mp3") do |item|
+			TagLib::FileRef.open(item) do |refFile|
+				tag = refFile.tag
+				@records.push(Mp3Record.new(tag.title, tag.artist, tag.album, item))
 			end
 		end
 	end
 
-	def structurize
-		collectedItems = Hash.new { |h,k| h[k] = []}
+	def aggregate
+		aggregatedValues = Hash.new { |h,k| h[k] = [] }
 		@records.each do |record|
-			collectedItems[record.asSongName()] << record
+			aggregatedValues[record.asSongName()] << record
 		end
-		pp collectedItems
+		aggregatedValues
 	end	
+	
+	def organize(aggregatedValues, dir)
+		aggregatedValues.each do |key, records|
+			firstRecord = records.first
+			recordsPath = "#{dir}/#{firstRecord.artist}/"
+			downcaseTitle = firstRecord.title.to_s.downcase
+			if downcaseTitle.include? "[live]" or downcaseTitle.include? "(live)"
+				recordsPath += "live/"
+			end
+			FileUtils.mkpath recordsPath	
+			records.each_with_index do |record, index|
+				destination = recordsPath + "#{record.artist} - #{record.title}"
+				if records.size > 1
+					destination += " D[#{index}]"
+				end
+				destination += "#{File.extname(record.file)}"
+				FileUtils.cp(record.file, destination)
+			end
+		end
+	end
 
 end
 
@@ -55,7 +77,7 @@ end
 dir = ARGV[0]
 manager = RecordManager.new
 manager.collect(dir)
-manager.structurize()
+manager.organize(manager.aggregate(), ".")
 
 
 
