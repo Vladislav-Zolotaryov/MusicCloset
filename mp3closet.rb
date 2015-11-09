@@ -70,14 +70,15 @@ class RecordManager
 
 end
 
-if ARGV.size != 1
-	raise 'Pass dir argument'
+if ARGV.size != 2
+	raise 'Pass input and output dirs as arguments'
 end
 
-dir = ARGV[0]
+inputDir = ARGV[0]
+outputDir = ARGV[1]
 manager = RecordManager.new
-manager.collect(dir)
-manager.organize(manager.aggregate(), ".")
+manager.collect(inputDir)
+manager.organize(manager.aggregate(), outputDir)
 
 
 
