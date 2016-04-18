@@ -105,13 +105,13 @@ class RecordNameResolver
     name_parts.push(record.artist.to_s)
     name_parts.push(record.title.to_s)
 
-    name_parts.select! { |x| !x.nil? || !x.empty? }
     name_parts.map! { |e| replace_illegal_characters(e).strip.squeeze(' ') }
+    name_parts.select! { |x| !x.empty? }
 
     if !name_parts.empty?
       name_parts.join(' - ')
     else
-      File.basename(record.file)
+      File.basename(record.file, File.extname(record.file))
     end
   end
 end
